@@ -7,7 +7,6 @@ export default function handler(req, res) {
     }
 
     const { username, license, hwid } = req.body;
-
     if (!username || !license || !hwid) {
         return res.status(400).json({ message: 'Missing credentials or HWID' });
     }
