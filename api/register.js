@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+// api/register.js
+let users = []; // Memory storage
 
 export default function handler(req, res) {
     if (req.method !== "POST") {
@@ -12,19 +12,18 @@ export default function handler(req, res) {
         return res.status(400).json({ message: "Missing username or license" });
     }
 
-    const filePath = path.join(process.cwd(), "api", "data.json");
-    let users = [];
-
-    if (fs.existsSync(filePath)) {
-        users = JSON.parse(fs.readFileSync(filePath));
-    }
-
-    if (users.find(u => u.username === username)) {
+    // Check if username already exists
+    const existingUser = users.find(u => u.username === username);
+    if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
     }
 
+    // Save to memory
     users.push({ username, license, hwid: null });
-    fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
+    console.log("Registered:", users);
 
     return res.status(200).json({ message: "Registered successfully" });
 }
+
+// Export the in-memory users for other API routes
+export { users };
