@@ -7,7 +7,6 @@ export default function handler(req, res) {
     }
 
     const { username, license } = req.body;
-
     if (!username || !license) {
         return res.status(400).json({ message: 'Missing username or license' });
     }
