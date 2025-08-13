@@ -1,28 +1,38 @@
-<?php
-$host = "localhost";
-$dbname = "licenses_db";
-$dbuser = "db_user";
-$dbpass = "db_pass";
+import fs from 'fs';
+import path from 'path';
 
-$username = isset($_GET['username']) ? $_GET['username'] : '';
-$license  = isset($_GET['license']) ? $_GET['license'] : '';
+export default function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
 
-$conn = new mysqli($host, $dbuser, $dbpass, $dbname);
-if ($conn->connect_error) {
-    die("DB connection failed");
+    const { username, license, hwid } = req.body;
+
+    if (!username || !license || !hwid) {
+        return res.status(400).json({ message: 'Missing credentials or HWID' });
+    }
+
+    const filePath = path.join(process.cwd(), 'data.json');
+    if (!fs.existsSync(filePath)) {
+        return res.status(400).json({ message: 'No users registered yet' });
+    }
+
+    let users = JSON.parse(fs.readFileSync(filePath));
+
+    let user = users.find(u => u.username === username && u.license === license);
+    if (!user) {
+        return res.status(401).json({ message: 'INVALID' });
+    }
+
+    if (user.hwid === null) {
+        user.hwid = hwid;
+        fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
+        return res.status(200).json({ message: 'VALID' });
+    }
+
+    if (user.hwid === hwid) {
+        return res.status(200).json({ message: 'VALID' });
+    } else {
+        return res.status(401).json({ message: 'HWID MISMATCH' });
+    }
 }
-
-$stmt = $conn->prepare("SELECT * FROM users WHERE username=? AND license_key=?");
-$stmt->bind_param("ss", $username, $license);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows > 0) {
-    echo "VALID";
-} else {
-    echo "INVALID";
-}
-
-$stmt->close();
-$conn->close();
-?>
