@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/Serverfiles/register", "destination": "/api/register" },
+    { "source": "/Serverfiles/check_license", "destination": "/api/check_license" }
+  ]
+}
