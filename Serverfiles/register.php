@@ -1,47 +1,30 @@
-<?php
-// Database credentials
-$host = "localhost";
-$dbname = "licenses_db";
-$dbuser = "db_user";
-$dbpass = "db_pass";
+import fs from 'fs';
+import path from 'path';
 
-// Connect to DB
-$conn = new mysqli($host, $dbuser, $dbpass, $dbname);
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
-}
-
-// Get username from POST
-$username = isset($_POST['username']) ? trim($_POST['username']) : '';
-if ($username === '') {
-    die("Invalid username.");
-}
-
-// Generate random license key
-function generateLicense($length = 16) {
-    $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    $license = '';
-    for ($i = 0; $i < $length; $i++) {
-        $license .= $chars[rand(0, strlen($chars) - 1)];
+export default function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ message: 'Method not allowed' });
     }
-    return $license;
+
+    const { username, license } = req.body;
+
+    if (!username || !license) {
+        return res.status(400).json({ message: 'Missing username or license' });
+    }
+
+    const filePath = path.join(process.cwd(), 'data.json');
+    let users = [];
+
+    if (fs.existsSync(filePath)) {
+        users = JSON.parse(fs.readFileSync(filePath));
+    }
+
+    if (users.find(u => u.username === username)) {
+        return res.status(400).json({ message: 'Username already exists' });
+    }
+
+    users.push({ username, license, hwid: null });
+    fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
+
+    res.status(200).json({ message: 'Registered successfully!' });
 }
-
-$license_key = generateLicense();
-
-// Store in DB
-$stmt = $conn->prepare("INSERT INTO users (username, license_key) VALUES (?, ?)");
-$stmt->bind_param("ss", $username, $license_key);
-
-if ($stmt->execute()) {
-    echo "<h2>Registration Successful!</h2>";
-    echo "<p>Username: <b>$username</b></p>";
-    echo "<p>License Key: <b>$license_key</b></p>";
-    echo "<p>You can now log in with these credentials in the loader.</p>";
-} else {
-    echo "Error: Username may already exist.";
-}
-
-$stmt->close();
-$conn->close();
-?>
