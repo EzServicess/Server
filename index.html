@@ -2,128 +2,171 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Account Portal</title>
+<title>Loader Panel</title>
 <style>
-  body { background: #282828; color: white; font-family: Arial, sans-serif; text-align: center; }
-  .hidden { display: none; }
-  input, button { padding: 10px; margin: 5px; border-radius: 5px; border: none; width: 250px; }
-  .container { margin-top: 50px; }
-  button { background-color: #1e90ff; color: white; cursor: pointer; }
-  button:hover { background-color: #1565c0; }
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #282828;
+        color: white;
+        text-align: center;
+    }
+    .container {
+        max-width: 400px;
+        margin: 50px auto;
+        background: #1f1f1f;
+        padding: 20px;
+        border-radius: 10px;
+    }
+    input, button {
+        width: 90%;
+        padding: 10px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 5px;
+    }
+    input {
+        background: #333;
+        color: white;
+    }
+    button {
+        background: dodgerblue;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .hidden {
+        display: none;
+    }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
 <body>
 
-<div class="container" id="loginContainer">
-  <h2>Login</h2>
-  <input type="email" id="loginEmail" placeholder="Email"><br>
-  <input type="password" id="loginPassword" placeholder="Password"><br>
-  <button onclick="login()">Login</button>
-  <p>Don't have an account? <a href="#" onclick="showRegister()">Register</a></p>
-</div>
-
-<div class="container hidden" id="registerContainer">
-  <h2>Register</h2>
-  <input type="email" id="registerEmail" placeholder="Email"><br>
-  <input type="password" id="registerPassword" placeholder="Password"><br>
-  <button onclick="register()">Register</button>
-  <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
+<div class="container" id="auth-container">
+    <h2 id="form-title">Login</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="text" id="license" placeholder="License">
+    <button onclick="handleLogin()">Login</button>
+    <p>or</p>
+    <button onclick="toggleForm()">Switch to Register</button>
 </div>
 
 <div class="container hidden" id="dashboard">
-  <h2>Welcome, <span id="userEmail"></span></h2>
-  <p>Your role: <span id="userRole"></span></p>
-  <div id="ownerTools" class="hidden">
-    <h3>Create Loader Account</h3>
-    <input type="text" id="loaderUsername" placeholder="Loader Username"><br>
-    <input type="text" id="loaderLicense" placeholder="Loader License"><br>
-    <button onclick="createLoaderAccount()">Create Loader Account</button>
-  </div>
-  <br>
-  <button onclick="logout()">Logout</button>
+    <h2>Welcome, <span id="display-username"></span></h2>
+    <p>Your License: <span id="display-license"></span></p>
+    <div id="owner-panel" class="hidden">
+        <h3>Owner Panel - Create Loader Accounts</h3>
+        <input type="text" id="new-username" placeholder="New Loader Username">
+        <input type="text" id="new-license" placeholder="New Loader License">
+        <button onclick="createLoaderAccount()">Create Loader Account</button>
+    </div>
+    <button onclick="logout()">Logout</button>
 </div>
 
 <script>
 const SUPABASE_URL = "https://wfdsdjqymxsvciyefnhq.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmZHNkanF5bXhzdmNpeWVmbmhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTczMTcsImV4cCI6MjA3MDczMzMxN30.LHU8VueqF-iuLQutghLRf4SItBywRZent3ah_mMN944";
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let isRegister = false;
 
-async function login() {
-  const email = document.getElementById('loginEmail').value;
-  const password = document.getElementById('loginPassword').value;
-
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) return alert(error.message);
-
-  loadDashboard(email);
+function toggleForm() {
+    isRegister = !isRegister;
+    document.getElementById("form-title").innerText = isRegister ? "Register" : "Login";
+    document.querySelector("#auth-container button").setAttribute("onclick", isRegister ? "handleRegister()" : "handleLogin()");
 }
 
-async function register() {
-  const email = document.getElementById('registerEmail').value;
-  const password = document.getElementById('registerPassword').value;
+async function handleRegister() {
+    const username = document.getElementById("username").value.trim();
+    const license = document.getElementById("license").value.trim();
+    if (!username || !license) {
+        alert("Fill in both fields");
+        return;
+    }
 
-  const { data, error } = await supabaseClient.auth.signUp({ email, password });
-  if (error) return alert(error.message);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/loader_accounts`, {
+        method: "POST",
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({ username, license, role: "user" })
+    });
 
-  // Add to website_users with default role "user"
-  await supabaseClient.from('website_users').insert([{ email, role: 'user' }]);
-
-  alert("Account created! Please log in.");
-  showLogin();
+    if (res.ok) {
+        alert("Registered successfully!");
+        toggleForm();
+    } else {
+        alert("Error registering. Username or license might already exist.");
+    }
 }
 
-function showRegister() {
-  document.getElementById('loginContainer').classList.add('hidden');
-  document.getElementById('registerContainer').classList.remove('hidden');
-}
+async function handleLogin() {
+    const username = document.getElementById("username").value.trim();
+    const license = document.getElementById("license").value.trim();
+    if (!username || !license) {
+        alert("Fill in both fields");
+        return;
+    }
 
-function showLogin() {
-  document.getElementById('registerContainer').classList.add('hidden');
-  document.getElementById('loginContainer').classList.remove('hidden');
-}
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/loader_accounts?username=eq.${username}&license=eq.${license}`, {
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
+        }
+    });
 
-async function loadDashboard(email) {
-  document.getElementById('loginContainer').classList.add('hidden');
-  document.getElementById('registerContainer').classList.add('hidden');
-  document.getElementById('dashboard').classList.remove('hidden');
-  document.getElementById('userEmail').textContent = email;
+    const data = await res.json();
+    if (data.length === 0) {
+        alert("Invalid username or license.");
+        return;
+    }
 
-  let { data, error } = await supabaseClient
-    .from('website_users')
-    .select('role')
-    .eq('email', email)
-    .single();
+    const user = data[0];
+    document.getElementById("display-username").innerText = user.username;
+    document.getElementById("display-license").innerText = user.license;
+    document.getElementById("auth-container").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
 
-  if (error) {
-    console.error(error);
-    return alert("Error fetching role.");
-  }
-
-  document.getElementById('userRole').textContent = data.role;
-  if (data.role === 'owner') {
-    document.getElementById('ownerTools').classList.remove('hidden');
-  }
+    if (user.role === "owner") {
+        document.getElementById("owner-panel").classList.remove("hidden");
+    }
 }
 
 async function createLoaderAccount() {
-  const username = document.getElementById('loaderUsername').value;
-  const license = document.getElementById('loaderLicense').value;
+    const newUsername = document.getElementById("new-username").value.trim();
+    const newLicense = document.getElementById("new-license").value.trim();
+    if (!newUsername || !newLicense) {
+        alert("Fill in both fields");
+        return;
+    }
 
-  if (!username || !license) return alert("Please fill in all fields.");
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/loader_accounts`, {
+        method: "POST",
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({ username: newUsername, license: newLicense, role: "user" })
+    });
 
-  let { error } = await supabaseClient
-    .from('loader_accounts')
-    .insert([{ username, license, hwid: null }]);
-
-  if (error) return alert(error.message);
-  alert("Loader account created!");
+    if (res.ok) {
+        alert("Loader account created!");
+        document.getElementById("new-username").value = "";
+        document.getElementById("new-license").value = "";
+    } else {
+        alert("Error creating loader account.");
+    }
 }
 
-async function logout() {
-  await supabaseClient.auth.signOut();
-  location.reload();
+function logout() {
+    document.getElementById("auth-container").classList.remove("hidden");
+    document.getElementById("dashboard").classList.add("hidden");
+    document.getElementById("owner-panel").classList.add("hidden");
+    document.getElementById("username").value = "";
+    document.getElementById("license").value = "";
 }
 </script>
 
