@@ -6,14 +6,14 @@
 <style>
     body {
         font-family: Arial, sans-serif;
-        background-color: #282828;
+        background-color: #1a1a1a;
         color: white;
         text-align: center;
     }
     .container {
         max-width: 400px;
         margin: 50px auto;
-        background: #1f1f1f;
+        background: #222;
         padding: 20px;
         border-radius: 10px;
     }
@@ -45,7 +45,7 @@
     <h2 id="form-title">Login</h2>
     <input type="text" id="username" placeholder="Username">
     <input type="text" id="license" placeholder="License">
-    <button onclick="handleLogin()">Login</button>
+    <button id="main-action" onclick="handleLogin()">Login</button>
     <p>or</p>
     <button onclick="toggleForm()">Switch to Register</button>
 </div>
@@ -71,7 +71,8 @@ let isRegister = false;
 function toggleForm() {
     isRegister = !isRegister;
     document.getElementById("form-title").innerText = isRegister ? "Register" : "Login";
-    document.querySelector("#auth-container button").setAttribute("onclick", isRegister ? "handleRegister()" : "handleLogin()");
+    document.getElementById("main-action").innerText = isRegister ? "Register" : "Login";
+    document.getElementById("main-action").setAttribute("onclick", isRegister ? "handleRegister()" : "handleLogin()");
 }
 
 async function handleRegister() {
@@ -82,6 +83,20 @@ async function handleRegister() {
         return;
     }
 
+    // Check if username already exists
+    let checkRes = await fetch(`${SUPABASE_URL}/rest/v1/loader_accounts?username=eq.${username}`, {
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
+        }
+    });
+    let checkData = await checkRes.json();
+    if (checkData.length > 0) {
+        alert("Username already exists.");
+        return;
+    }
+
+    // Create account
     const res = await fetch(`${SUPABASE_URL}/rest/v1/loader_accounts`, {
         method: "POST",
         headers: {
@@ -90,14 +105,14 @@ async function handleRegister() {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
         },
-        body: JSON.stringify({ username, license, role: "user" })
+        body: JSON.stringify({ username, license, role: "user", hwid: null })
     });
 
     if (res.ok) {
-        alert("Registered successfully!");
+        alert("Registered successfully! You can now log in.");
         toggleForm();
     } else {
-        alert("Error registering. Username or license might already exist.");
+        alert("Error registering account.");
     }
 }
 
@@ -149,7 +164,7 @@ async function createLoaderAccount() {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
         },
-        body: JSON.stringify({ username: newUsername, license: newLicense, role: "user" })
+        body: JSON.stringify({ username: newUsername, license: newLicense, role: "user", hwid: null })
     });
 
     if (res.ok) {
