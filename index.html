@@ -1,37 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dexter Services - Register</title>
+  <meta charset="UTF-8">
+  <title>DexterServices Registration</title>
 </head>
 <body>
-    <h1>Register</h1>
-    <input type="text" id="username" placeholder="Username"><br>
-    <input type="text" id="license" placeholder="License Key"><br>
-    <button onclick="registerUser()">Register</button>
+  <h1>Register Account</h1>
+  <input type="text" id="username" placeholder="Username">
+  <input type="text" id="license" placeholder="License Key">
+  <button onclick="register()">Register</button>
+  <p id="status"></p>
 
-    <script>
-        async function registerUser() {
-            const username = document.getElementById("username").value.trim();
-            const license = document.getElementById("license").value.trim();
+<script>
+const SUPABASE_URL = "https://wfdsdjqymxsvciyefnhq.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmZHNkanF5bXhzdmNpeWVmbmhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTczMTcsImV4cCI6MjA3MDczMzMxN30.LHU8VueqF-iuLQutghLRf4SItBywRZent3ah_mMN944";
 
-            if (!username || !license) {
-                alert("Please fill in both fields.");
-                return;
-            }
+async function register() {
+    const username = document.getElementById("username").value.trim();
+    const license = document.getElementById("license").value.trim();
 
-            try {
-                const res = await fetch("/api/register", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, license })
-                });
+    if (!username || !license) {
+        document.getElementById("status").innerText = "Fill all fields!";
+        return;
+    }
 
-                const data = await res.json();
-                alert(data.message || "Unknown response from server");
-            } catch (err) {
-                alert("Error: " + err.message);
-            }
-        }
-    </script>
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Prefer": "return=representation"
+        },
+        body: JSON.stringify({ username, license, hwid: null })
+    });
+
+    if (res.ok) {
+        document.getElementById("status").innerText = "Registration successful!";
+    } else {
+        const errorText = await res.text();
+        document.getElementById("status").innerText = "Error: " + errorText;
+    }
+}
+</script>
 </body>
 </html>
