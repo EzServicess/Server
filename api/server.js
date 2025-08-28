@@ -31,17 +31,27 @@ export default function handler(req, res) {
     }
 
     const action = req.query.action;
-    const { username, license, hwid } = req.body;
+    const { username, license, hwid, duration } = req.body; // duration in days
     let users = loadUsers();
 
     if (action === "register") {
-        if (!username || !license) {
-            return res.status(400).json({ message: "Missing username or license" });
+        if (!username || !license || !duration) {
+            return res.status(400).json({ message: "Missing fields" });
         }
         if (users.find(u => u.username === username)) {
             return res.status(400).json({ message: "Username already exists" });
         }
-        users.push({ username, license, hwid: null });
+
+        const expires_at = new Date();
+        expires_at.setDate(expires_at.getDate() + parseInt(duration)); // add days
+
+        users.push({
+            username,
+            license,
+            hwid: null,
+            created_at: new Date().toISOString(),
+            expires_at: expires_at.toISOString()
+        });
         saveUsers(users);
         return res.status(200).json({ message: "Registered successfully" });
     }
@@ -50,19 +60,28 @@ export default function handler(req, res) {
         if (!username || !license || !hwid) {
             return res.status(400).json({ message: "Missing fields" });
         }
+
         const user = users.find(u => u.username === username && u.license === license);
         if (!user) {
             return res.status(401).json({ message: "INVALID" });
         }
-        if (!user.hwid) {
-            user.hwid = hwid;
-            saveUsers(users);
-            return res.status(200).json({ message: "VALID" });
+
+        const now = new Date();
+        if (user.expires_at && new Date(user.expires_at) < now) {
+            return res.status(403).json({ message: "LICENSE EXPIRED" });
         }
+
+        if (!user.hwid) {
+            user.hwid = hwid; // lock HWID
+            saveUsers(users);
+            return res.status(200).json({ message: "VALID", expires_at: user.expires_at });
+        }
+
         if (user.hwid !== hwid) {
             return res.status(403).json({ message: "HWID MISMATCH" });
         }
-        return res.status(200).json({ message: "VALID" });
+
+        return res.status(200).json({ message: "VALID", expires_at: user.expires_at });
     }
 
     return res.status(400).json({ message: "Unknown action" });
