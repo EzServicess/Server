@@ -14,7 +14,7 @@
 
 <h1>Dev Panel - Create License</h1>
 
-<input id="licenseUsername" placeholder="Username"><br>
+<input id="licenseKey" placeholder="License"><br>
 <input id="licenseDuration" placeholder="Duration (days, e.g., 7, 30)"><br>
 <button onclick="createLicense()">Create License</button>
 
@@ -29,12 +29,10 @@ function addDays(date, days) {
 }
 
 async function createLicense() {
-    const username = document.getElementById("licenseUsername").value.trim();
+    const licenseKey = document.getElementById("licenseKey").value.trim();
     const duration = parseInt(document.getElementById("licenseDuration").value.trim());
-    if (!username || !duration) return alert("Fill in all fields");
+    if (!licenseKey || !duration) return alert("Fill in all fields");
 
-    // Generate a random license key
-    const license = Math.random().toString(36).substring(2, 12).toUpperCase();
     const expires_at = addDays(new Date(), duration);
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
@@ -45,10 +43,10 @@ async function createLicense() {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
         },
-        body: JSON.stringify({ username, license, expires_at })
+        body: JSON.stringify({ license: licenseKey, expires_at })
     });
 
-    if (res.ok) alert(`License created: ${license} (expires in ${duration} days)`);
+    if (res.ok) alert(`License created: ${licenseKey} (expires in ${duration} days)`);
     else alert("Error creating license");
 }
 </script>
