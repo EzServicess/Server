@@ -5,7 +5,6 @@
     <title>Loader Panel</title>
     <style>
         body { font-family: Arial, sans-serif; background: #101820; color: white; text-align: center; }
-        .tab { display: none; margin-top: 20px; }
         input { padding: 10px; margin: 5px; }
         button { padding: 10px; background: #1e90ff; color: white; border: none; cursor: pointer; }
         button:hover { background: #0077cc; }
@@ -13,47 +12,30 @@
 </head>
 <body>
 
-<h1>Loader Panel</h1>
+<h1>Loader Panel - Create License</h1>
 
-<div id="authTabs">
-    <button onclick="showTab('registerTab')">Register</button>
-    <button onclick="showTab('loginTab')">Login</button>
-</div>
-
-<div id="registerTab" class="tab">
-    <h2>Register</h2>
-    <input id="regUsername" placeholder="Username"><br>
-    <input id="regLicense" placeholder="License"><br>
-    <button onclick="register()">Register</button>
-</div>
-
-<div id="loginTab" class="tab">
-    <h2>Login</h2>
-    <input id="loginUsername" placeholder="Username"><br>
-    <input id="loginLicense" placeholder="License"><br>
-    <button onclick="login()">Login</button>
-</div>
-
-<div id="adminTab" class="tab">
-    <h2>Create Loader Account</h2>
-    <input id="loaderUsername" placeholder="Loader Username"><br>
-    <input id="loaderLicense" placeholder="Loader License"><br>
-    <button onclick="createLoaderAccount()">Create Loader Account</button>
-</div>
+<input id="licenseUsername" placeholder="Username"><br>
+<input id="licenseDuration" placeholder="Duration (days, e.g., 7, 30)"><br>
+<button onclick="createLicense()">Create License</button>
 
 <script>
 const SUPABASE_URL = "https://wfdsdjqymxsvciyefnhq.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmZHNkanF5bXhzdmNpeWVmbmhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTczMTcsImV4cCI6MjA3MDczMzMxN30.LHU8VueqF-iuLQutghLRf4SItBywRZent3ah_mMN944";
+const SUPABASE_KEY = "YOUR_SUPABASE_API_KEY";
 
-function showTab(id) {
-    document.querySelectorAll(".tab").forEach(tab => tab.style.display = "none");
-    document.getElementById(id).style.display = "block";
+function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result.toISOString();
 }
 
-async function register() {
-    const username = document.getElementById("regUsername").value.trim();
-    const license = document.getElementById("regLicense").value.trim();
-    if (!username || !license) return alert("Fill in all fields");
+async function createLicense() {
+    const username = document.getElementById("licenseUsername").value.trim();
+    const duration = parseInt(document.getElementById("licenseDuration").value.trim());
+    if (!username || !duration) return alert("Fill in all fields");
+
+    // Generate a random license key
+    const license = Math.random().toString(36).substring(2, 12).toUpperCase();
+    const expires_at = addDays(new Date(), duration);
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
         method: "POST",
@@ -63,54 +45,11 @@ async function register() {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
         },
-        body: JSON.stringify({ username, license })
+        body: JSON.stringify({ username, license, expires_at })
     });
 
-    if (res.ok) alert("Account registered!");
-    else alert("Error registering account");
-}
-
-async function login() {
-    const username = document.getElementById("loginUsername").value.trim();
-    const license = document.getElementById("loginLicense").value.trim();
-    if (!username || !license) return alert("Fill in all fields");
-
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${username}&license=eq.${license}`, {
-        headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": `Bearer ${SUPABASE_KEY}`
-        }
-    });
-
-    const data = await res.json();
-    if (data.length === 0) {
-        alert("Invalid username or license");
-    } else {
-        alert("Login successful!");
-        if (username.toLowerCase() === "owner") {
-            document.getElementById("adminTab").style.display = "block";
-        }
-    }
-}
-
-async function createLoaderAccount() {
-    const username = document.getElementById("loaderUsername").value.trim();
-    const license = document.getElementById("loaderLicense").value.trim();
-    if (!username || !license) return alert("Fill in all fields");
-
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
-        method: "POST",
-        headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": `Bearer ${SUPABASE_KEY}`,
-            "Content-Type": "application/json",
-            "Prefer": "return=minimal"
-        },
-        body: JSON.stringify({ username, license })
-    });
-
-    if (res.ok) alert("Loader account created!");
-    else alert("Error creating loader account");
+    if (res.ok) alert(`License created: ${license} (expires in ${duration} days)`);
+    else alert("Error creating license");
 }
 </script>
 
